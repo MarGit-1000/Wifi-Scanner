@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WiFi QR Code Scanner</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: Arial; text-align: center; padding: 20px; }
+    #result { margin-top: 20px; font-size: 18px; }
+    #decoded-wifi { color: green; margin-top: 10px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h2>WiFi QR Code Scanner</h2>
+  <div id="reader" style="width: 300px; margin: auto;"></div>
+  <div id="result">Scan a QR Code</div>
+  <div id="decoded-wifi"></div>
+
+  <script>
+    function parseWiFiQR(text) {
+      if (!text.startsWith("WIFI:")) return null;
+      const ssid = /S:([^;]*)/.exec(text)?.[1] ?? "Unknown";
+      const pass = /P:([^;]*)/.exec(text)?.[1] ?? "None";
+      const type = /T:([^;]*)/.exec(text)?.[1] ?? "Unknown";
+      return `📶 SSID: ${ssid}\n🔐 Password: ${pass}\n🔒 Security: ${type}`;
+    }
+
+    const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+      document.getElementById("result").innerText = "✅ QR Code Detected!";
+      const wifiInfo = parseWiFiQR(decodedText);
+      document.getElementById("decoded-wifi").innerText = wifiInfo || decodedText;
+    };
+
+    const html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start(
+      { facingMode: "environment" }, // back camera
+      { fps: 10, qrbox: 250 },
+      qrCodeSuccessCallback
+    ).catch(err => {
+      document.getElementById("result").innerText = "❌ Error: " + err;
+    });
+  </script>
+</body>
+</html>
