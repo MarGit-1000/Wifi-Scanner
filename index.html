@@ -1,43 +1,651 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <title>WiFi QR Code Scanner</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <style>
-    body { font-family: Arial; text-align: center; padding: 20px; }
-    #result { margin-top: 20px; font-size: 18px; }
-    #decoded-wifi { color: green; margin-top: 10px; white-space: pre-wrap; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WiFi QR Code Scanner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            padding: 20px;
+            color: #1a202c;
+        }
+
+        /* Green Nature Theme Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                #2d5016 0%,     /* Dark forest green */
+                #4a7c59 25%,    /* Forest green */
+                #68b684 50%,    /* Sage green */
+                #87ceeb 75%,    /* Sky blue */
+                #98fb98 100%    /* Pale green */
+            );
+            z-index: -2;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(144, 238, 144, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(152, 251, 152, 0.4) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(34, 139, 34, 0.2) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 
+                0 25px 50px rgba(0, 0, 0, 0.15),
+                0 0 0 1px rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #22c55e, #16a34a, #15803d);
+            border-radius: 24px 24px 0 0;
+        }
+
+        h1 {
+            text-align: center;
+            background: linear-gradient(135deg, #15803d, #22c55e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 32px;
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .scanner-section {
+            margin-bottom: 24px;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        button {
+            padding: 16px 24px;
+            border: none;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: none;
+            letter-spacing: 0.025em;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #84cc16, #65a30d);
+            color: white;
+            box-shadow: 0 4px 14px rgba(132, 204, 22, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #reader {
+            width: 100%;
+            max-width: 350px;
+            margin: 0 auto 24px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            border: 2px solid rgba(34, 197, 94, 0.2);
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .file-input-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, #a3f3a3, #7dd87d);
+            color: #15803d;
+            border-radius: 16px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 24px;
+            border: 2px solid rgba(21, 128, 61, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.25);
+        }
+
+        .status {
+            text-align: center;
+            padding: 16px 20px;
+            border-radius: 16px;
+            margin: 16px 0;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            border: 1px solid;
+            animation: statusSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes statusSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .status.success {
+            background: rgba(220, 252, 231, 0.9);
+            color: #14532d;
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+
+        .status.error {
+            background: rgba(254, 242, 242, 0.9);
+            color: #7f1d1d;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .status.info {
+            background: rgba(239, 246, 255, 0.9);
+            color: #1e3a8a;
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        /* Enhanced Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from { 
+                opacity: 0; 
+                backdrop-filter: blur(0px);
+            }
+            to { 
+                opacity: 1; 
+                backdrop-filter: blur(8px);
+            }
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            margin: 5% auto;
+            padding: 32px;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 480px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 
+                0 25px 50px rgba(0, 0, 0, 0.25),
+                0 0 0 1px rgba(255, 255, 255, 0.2);
+            animation: modalSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes modalSlideIn {
+            from { 
+                transform: translateY(-30px) scale(0.95); 
+                opacity: 0; 
+            }
+            to { 
+                transform: translateY(0) scale(1); 
+                opacity: 1; 
+            }
+        }
+
+        .modal-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #22c55e, #16a34a, #15803d);
+            border-radius: 24px 24px 0 0;
+        }
+
+        .close {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #6b7280;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .close:hover {
+            color: #ef4444;
+            background: rgba(254, 242, 242, 0.9);
+            transform: scale(1.1);
+        }
+
+        .wifi-info {
+            margin: 24px 0;
+        }
+
+        .wifi-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            margin: 12px 0;
+            background: rgba(240, 253, 244, 0.8);
+            border-radius: 16px;
+            border-left: 4px solid #22c55e;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            animation: wifiItemSlideIn 0.5s ease-out;
+        }
+
+        @keyframes wifiItemSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .wifi-item:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
+        }
+
+        .wifi-label {
+            font-weight: 600;
+            color: #15803d;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .wifi-value {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 12px;
+            border-radius: 8px;
+            word-break: break-all;
+            max-width: 200px;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .copy-btn {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .copy-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+        }
+
+        .copy-btn.copied {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            animation: copySuccess 0.3s ease;
+        }
+
+        @keyframes copySuccess {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Improved Error Modal */
+        .error-content {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: block;
+            animation: errorBounce 0.6s ease-out;
+        }
+
+        @keyframes errorBounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .error-message {
+            color: #4a5568;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .retry-btn {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .retry-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(34, 197, 94, 0.4);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 24px;
+            }
+            
+            .button-group {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .modal-content {
+                margin: 10% auto;
+                width: 95%;
+                padding: 24px;
+            }
+            
+            .wifi-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            
+            .wifi-value {
+                max-width: 100%;
+                word-break: break-all;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 24px;
+            }
+            
+            .modal-content {
+                margin: 5% auto;
+                max-height: 90vh;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 2px solid white;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-  <h2>WiFi QR Code Scanner</h2>
-  <div id="reader" style="width: 300px; margin: auto;"></div>
-  <div id="result">Scan a QR Code</div>
-  <div id="decoded-wifi"></div>
+    <div class="container">
+        <h1><span>🌿</span> WiFi QR Scanner</h1>
+        
+        <div class="scanner-section">
+            <div class="button-group">
+                <button id="start-scan-btn" class="btn-primary">
+                    <span>📹</span> Mulai Scan
+                </button>
+                <button id="stop-scan-btn" class="btn-danger hidden">
+                    <span>⏹</span> Berhenti
+                </button>
+            </div>
+            
+            <label for="file-input" class="file-input-label">
+                <span>📂</span> Pilih dari Galeri
+            </label>
+            <input type="file" id="file-input" accept="image/*">
+            
+            <div id="reader"></div>
+            <div id="status" class="status info">
+                <span>🌱</span> Siap untuk scan QR Code WiFi
+            </div>
+        </div>
+    </div>
 
-  <script>
-    function parseWiFiQR(text) {
-      if (!text.startsWith("WIFI:")) return null;
-      const ssid = /S:([^;]*)/.exec(text)?.[1] ?? "Unknown";
-      const pass = /P:([^;]*)/.exec(text)?.[1] ?? "None";
-      const type = /T:([^;]*)/.exec(text)?.[1] ?? "Unknown";
-      return `📶 SSID: ${ssid}\n🔐 Password: ${pass}\n🔒 Security: ${type}`;
-    }
+    <!-- Modal untuk menampilkan info WiFi -->
+    <div id="wifi-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 style="text-align: center; margin-bottom: 24px; color: #15803d; display: flex; align-items: center; justify-content: center; gap: 12px;">
+                <span>🌐</span> Informasi WiFi
+            </h2>
+            <div id="wifi-details" class="wifi-info"></div>
+        </div>
+    </div>
 
-    const qrCodeSuccessCallback = (decodedText, decodedResult) => {
-      document.getElementById("result").innerText = "✅ QR Code Detected!";
-      const wifiInfo = parseWiFiQR(decodedText);
-      document.getElementById("decoded-wifi").innerText = wifiInfo || decodedText;
-    };
+    <!-- Enhanced Error Modal -->
+    <div id="error-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div class="error-content">
+                <span class="error-icon">🔍</span>
+                <h2 style="color: #dc2626; margin-bottom: 16px; font-size: 24px;">QR Code Tidak Ditemukan</h2>
+                <p class="error-message">
+                    Gambar yang dipilih tidak mengandung QR Code WiFi yang valid. 
+                    Pastikan gambar jelas dan mengandung QR Code dengan format WiFi.
+                </p>
+                <button class="retry-btn" onclick="document.getElementById('error-modal').style.display='none'">
+                    <span>🔄</span> Coba Lagi
+                </button>
+            </div>
+        </div>
+    </div>
 
-    const html5QrCode = new Html5Qrcode("reader");
-    html5QrCode.start(
-      { facingMode: "environment" }, // back camera
-      { fps: 10, qrbox: 250 },
-      qrCodeSuccessCallback
-    ).catch(err => {
-      document.getElementById("result").innerText = "❌ Error: " + err;
-    });
-  </script>
-</body>
-</html>
+    <script>
+        let html5QrCode = null;
+        let isScanning = false;
+
+        // Elements
+        const startBtn = document.getElementById('start-scan-btn');
+        const stopBtn = document.getElementById('stop-scan-btn');
+        const fileInput = document.getElementById('file-input');
+        const status = document.getElementById('status');
+        const wifiModal = document.getElementById('wifi-modal');
+        const errorModal = document.getElementById('error-modal');
+        const wifiDetails = document.getElementById('wifi-details');
+
+        // Parse WiFi QR Code
+        function parseWiFiQR(text) {
+            if (!text.startsWith("WIFI:")) return null;
+            
+            const ssidMatch = text.match(/S:([^;]*)/);
+            const passMatch = text.match(/P:([^;]*)/);
+            const typeMatch = text.match(/T:([^;]*)/);
+            const hiddenMatch = text.match(/H:([^;]*)/);
+
+            return {
+                ssid: ssidMatch ? ssidMatch[1] : "Unknown",
+                password: passMatch ? passMatch[1] : "",
+                security: typeMatch ? typeMatch[1] : "None",
+                hidden: hiddenMatch ? hiddenMatch[1] === "true" : false
+            };
+        }
+
+        // Show WiFi details in modal
+        function showWiFiDetails(wifiInfo) {
+            const securityDisplay = wifiInfo.security || "Open";
+            const hiddenDisplay = wifiInfo.hidden ? "Ya" : "Tidak";
+            
+            wifiDetails.innerHTML = `
+                <div class="wifi-item">
+                    <span class="wifi-label"><span>📶</span> Nama WiFi (SSID):</span>
+                    <div>
+                        <span class="wifi-value">${wifiInfo.ssid}</span>
+                        <button class="copy-btn" onclick="copyToClipboard('${wifiInfo.ssid}', this)">Salin</button>
+                    </div>
+                </div>
+                <div class="wifi-item">
+                    <span class="wifi-label"><span>🔐</span> Password:</span>
+                    <div>
+                        <span class="wifi-value">${wifiInfo.password || "Tidak ada"}</span>
+                        ${wifiInfo.password ? `<button class="copy-btn" onclick="copyToClipboard('${wifiInfo.password}', this)">Salin</button>` : ''}
+                    </div>
+                </div>
+                <div class="wifi-item">
+                    <span class="wifi-label"><span>🔒</span> Keamanan:</span>
+                    <span class="wifi-value">${securityDisplay}</span>
+                </div>
+                <div class="wifi-item">
+                    <span class="wifi-label"><span>👁</span> Tersembunyi:</span>
+                    <span class="wifi-value">${hiddenDisplay}</span>
+                </div>
+            `;
+            wifiModal.style.display = 'block';
+        }
+
+        // Enhanced copy to clipboard function
+        async function copyToClipboard(text, button) {
+            try {
+                await navigator.clipboard.writeText(text);
+                const originalText = b
