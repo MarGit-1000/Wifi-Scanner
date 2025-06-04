@@ -648,4 +648,192 @@
         async function copyToClipboard(text, button) {
             try {
                 await navigator.clipboard.writeText(text);
-                const originalText = b
+                const originalText = button.innerHTML;
+                button.innerHTML = '<span>✅</span> Disalin!';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                const originalText = button.innerHTML;
+                button.innerHTML = '<span>✅</span> Disalin!';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            }
+        }
+
+        // QR Code success callback
+        function onScanSuccess(decodedText, decodedResult) {
+            const wifiInfo = parseWiFiQR(decodedText);
+            
+            if (wifiInfo) {
+                status.className = 'status success';
+                status.innerHTML = '<span>✅</span> QR Code WiFi berhasil dipindai!';
+                showWiFiDetails(wifiInfo);
+                
+                if (isScanning) {
+                    stopScanning();
+                }
+            } else {
+                status.className = 'status error';
+                status.innerHTML = '<span>❌</span> QR Code bukan format WiFi yang valid';
+            }
+        }
+
+        // Start camera scanning
+        function startScanning() {
+            html5QrCode = new Html5Qrcode("reader");
+            
+            // Show loading state
+            startBtn.innerHTML = '<div class="loading"></div> Memulai...';
+            startBtn.disabled = true;
+            
+            html5QrCode.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0
+                },
+                onScanSuccess,
+                (errorMessage) => {
+                    // Handle scan error silently
+                }
+            ).then(() => {
+                isScanning = true;
+                startBtn.classList.add('hidden');
+                stopBtn.classList.remove('hidden');
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<span>📹</span> Mulai Scan';
+                status.className = 'status info';
+                status.innerHTML = '<span>📹</span> Scanning... Arahkan kamera ke QR Code WiFi';
+            }).catch(err => {
+                status.className = 'status error';
+                status.innerHTML = '<span>❌</span> Error mengakses kamera: ' + err;
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<span>📹</span> Mulai Scan';
+            });
+        }
+
+        // Stop camera scanning
+        function stopScanning() {
+            if (html5QrCode && isScanning) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    isScanning = false;
+                    startBtn.classList.remove('hidden');
+                    stopBtn.classList.add('hidden');
+                    status.className = 'status info';
+                    status.innerHTML = '<span>🌱</span> Siap untuk scan QR Code WiFi';
+                }).catch(err => {
+                    console.error("Error stopping scanner:", err);
+                });
+            }
+        }
+
+        // Handle file input for gallery scanning
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (isScanning) {
+                stopScanning();
+            }
+
+            status.className = 'status info';
+            status.innerHTML = '<div class="loading"></div> Memproses gambar...';
+
+            html5QrCode = new Html5Qrcode("reader");
+            
+            html5QrCode.scanFile(file, true)
+                .then(decodedText => {
+                    const wifiInfo = parseWiFiQR(decodedText);
+                    
+                    if (wifiInfo) {
+                        status.className = 'status success';
+                        status.innerHTML = '<span>✅</span> QR Code WiFi ditemukan!';
+                        showWiFiDetails(wifiInfo);
+                    } else {
+                        status.className = 'status error';
+                        status.innerHTML = '<span>❌</span> QR Code bukan format WiFi';
+                        errorModal.style.display = 'block';
+                    }
+                })
+                .catch(err => {
+                    status.className = 'status error';
+                    status.innerHTML = '<span>❌</span> Tidak ditemukan QR Code dalam gambar';
+                    errorModal.style.display = 'block';
+                });
+
+            // Reset file input
+            event.target.value = '';
+        }
+
+        // Event listeners
+        startBtn.addEventListener('click', startScanning);
+        stopBtn.addEventListener('click', stopScanning);
+        fileInput.addEventListener('change', handleFileSelect);
+
+        // Enhanced modal close functionality
+        document.querySelectorAll('.close').forEach(closeBtn => {
+            closeBtn.addEventListener('click', function() {
+                const modal = this.closest('.modal');
+                modal.style.animation = 'modalFadeOut 0.3s ease-out';
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    modal.style.animation = '';
+                }, 300);
+            });
+        });
+
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            if (event.target.classList.contains('modal')) {
+                const modal = event.target;
+                modal.style.animation = 'modalFadeOut 0.3s ease-out';
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    modal.style.animation = '';
+                }, 300);
+            }
+        });
+
+        // Stop scanning when page is hidden/closed
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && isScanning) {
+                stopScanning();
+            }
+        });
+
+        // Add fadeout animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes modalFadeOut {
+                from { 
+                    opacity: 1; 
+                    backdrop-filter: blur(8px);
+                }
+                to { 
+                    opacity: 0; 
+                    backdrop-filter: blur(0px);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
